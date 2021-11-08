@@ -1,19 +1,5 @@
 """
-扫雷v1.2，预期解决清空空白格子问题，加入游戏胜利判断
-"""
-#判断地图的列数a和行数b（不一定需要调用）
-"""def map_size(map):
-    a = 0
-    b = 0
-    for key in map:
-        if (key[0] == 0) & (key[1] == 0):
-            a += 1
-            b += 1
-        elif key[0] == 0:
-            a += 1
-        elif key[1] == 0:
-            b += 1
-    return(a,b)
+扫雷v1.2，解决清空空白格子问题，加入游戏胜利判断
 """
 
 import random
@@ -55,12 +41,13 @@ def mine(mine):
         return('?')
     elif (not mine[0]) & (mine[1] == 3):
         return(str(mine[2]))
+    elif (mine[0]) & (mine[1] == 3):
+        return('*')
     else:
         return(' ')
 
 #打印地图
 def show_map(map):
-    clear() #清空屏幕
     #打印a*b大小地图
     print('#' * 3,end='')
     for j in range(a):
@@ -83,10 +70,10 @@ def count_mine(map):
     for key in map:
         count = 0
         for i in range(key[0] - 1,key[0] + 2):
-            if (i == -1) | (i == a):
+            if (i < 0) | (i > b - 1):
                 continue
             for j in range(key[1] - 1,key[1] + 2):
-                if (j == -1) | (j == b) | ((i,j) == key):
+                if (j < 0) | (j > a - 1) | ((i,j) == key):
                     continue
                 elif map[(i,j)][0]:
                     count += 1
@@ -95,44 +82,47 @@ def count_mine(map):
 
 #点中空白时清空周围
 def clear_around(map,key):
-    for key in map:
-        for i in range(key[0] - 1,key[0] + 2):
-            if (i == -1) | (i == a):
+    for keys in [(key[0] - 1,key[1] - 1),(key[0] - 1,key[1]),(key[0] - 1,key[1] + 1),(key[0],key[1] - 1),\
+                (key[0],key[1] + 1),(key[0] + 1,key[1] - 1),(key[0] + 1,key[1]),(key[0] + 1,key[1] + 1)]:
+            if (keys[0] < 0) | (keys[1] < 0) | (keys[0] >= a) | (keys[1] >= b):
                 continue
-            for j in range(key[1] - 1,key[1] + 2):
-                if (j == -1) | (j == b) | ((i,j) == key):
-                    continue
-                elif (map[(i,j)][2] == 0) & (map[(i,j)][1] == 0):
-                    map[(i,j)][1] = 3
-                    map = clear_around(map,(i,j))
-                elif (map[(i,j)][1] == 0):
-                    map[(i,j)][1] = 3
+            elif (map[keys][2] == 0) & (not map[keys][0]) & (map[keys][1] == 0):
+                map[keys][1] = 3
+                map = clear_around(map,keys)
+            elif (not map[keys][0]) & (map[keys][1] == 0):
+                map[keys][1] = 3
     return(map)
 
 #点击功能
 def click(i,j,map):
-    if map[(i - 1,j - 1)][0]:
+    global tip
+    if map[(i,j)][0]:
         #失败，游戏结束
+        clear()
         print("你点中了地雷")
-        end()        
-    elif map[(i - 1,j - 1)][1] == 3:
+        end(False,map)        
+    elif map[(i,j)][1] == 3:
         #提醒重复点击
-        print("重复点击")
+        tip = "请勿重复点击！"
     else:
-        map[(i - 1,j - 1)][1] = 3
-        if (map[(i - 1,j - 1)][2] == 0):
-            map = clear_around(map,(i - 1,j - 1))
+        map[(i,j)][1] = 3
+        if (map[(i,j)][2] == 0):
+            map = clear_around(map,(i,j))
     return(map)
 
 #开始程序
 def start():
     while True:
-        string = input("输入地图大小(形如5x5)：")
-        a = string.split('x',2)[0]
-        b = string.split('x',2)[1]
-        a = int(a)
-        b = int(b)
-        c = int(input("请输入地雷个数："))
+        try:
+            string = input("输入地图大小(形如5x5)：")
+            a = string.split('x',2)[0]
+            b = string.split('x',2)[1]
+            a = int(a)
+            b = int(b)
+            c = int(input("请输入地雷个数："))
+        except:
+            print("输入错误！")
+            continue
         if c >= a * b:
             print("地雷个数过多，请确保地雷个数小于总格数")
             continue
@@ -142,44 +132,78 @@ def start():
 
 #游戏程序
 def game(map):
-    show_map(map)
-    print(map)
-    map = count_mine(map)
-    print(map)
+    global tip
     while True:
-        string = input("输入要操作的格子坐标(形如4,3),输入q退出游戏:")
-        if string == 'q':
-            print("游戏已退出")
-            break
+        clear()
+        win(map)
+        show_map(map)
+        print(tip)
+        tip = ''
         try:
-            i = string.split(',',2)[0]
-            j = string.split(',',2)[1]
-            i = int(i)
-            j = int(j)
+            string = input("输入要操作的格子坐标(形如4,3),输入q退出游戏:")
+            j = string.split(',',2)[0]
+            i = string.split(',',2)[1]
+            i = int(i) - 1
+            j = int(j) - 1
         except:
-            print("输入格式错误，请重新输入:")
-        if (i <= 0) | (j <= 0) | (i > a) | (j > b):
-            print("输入错误，请重新输入:")
+            if string == 'q':
+                clear()
+                print("游戏已退出")
+                end(False,map)
+            else:
+                tip = "输入格式错误，请重新输入:"
+            continue
+        if (i < 0) | (j < 0) | (i > b - 1) | (j > a - 1):
+            tip = "输入错误，请重新输入:"
             continue
         else:
-            act = input("请确定要进行的操作，输入1进行点击操作，输入2进行~标记，输入3进行?标记，输入其他重新选择:")
+            act = input("请确定要进行的操作，输入1进行点击操作，输入2进行~标记，输入3进行?标记，输入4取消先前标记，输入其他重新选择:")
             if act == '1':
                 map = click(i,j,map)
-            elif act == '2':
+            #标记功能
+            elif (act == '2') & (map[i,j][1] != 3):
                 map[(i,j)][1] = 1
-            elif act == '3':
+            elif (act == '3') & (map[i,j][1] != 3):
                 map[(i,j)][1] = 2
+            elif (act == '4') & (map[i,j][1] != 3) & (map[i,j][1] != 0):
+                map[(i,j)][1] = 0
+            elif (act == '4') & (map[i,j][1] == 0):
+                tip = "该位置未标记！"
+                continue
+            elif map[i,j][1] == 3:
+                tip = "请勿重复标记！"
             else:
                 continue
-            show_map(map)
-            print(map)
     end()
 
 #游戏结束
-def end():
-    print("游戏结束！")
+def end(i,map):
+    for keys in map:
+        map[keys][1] = 3
+    show_map(map)
+    if i:
+        print("恭喜你胜利了！")
+        print("感谢您的游玩！")
+    else:
+        print("很抱歉，你失败了！")
+        print("感谢您的游玩！")
+    os.system("pause")
     exit()
 
+#判断胜利
+def win(map):
+    count = 0
+    for keys in map:
+        if (not map[keys][0]) & (map[keys][1] == 3):
+            count += 1
+    if count == a * b - c:
+        print("你已找出所有地雷！")
+        end(True,map)
+
+
+tip = '********py扫雷 v1.2********\n游戏胜利条件：\n当所有非地雷的方格均被点开。\n****游戏解释权归xke所有****'
+print(tip)
 a,b,c = start()
 map = create_map(a,b,c)
+map = count_mine(map)
 game(map)
