@@ -133,7 +133,7 @@ def click(i,j):
     if map[(i,j)][0]:
         #失败，游戏结束
         tip = "你点中了地雷！"
-        end(False,map)        
+        end(False)        
     elif map[(i,j)][1] == 3:
         #提醒重复点击
         tip = "请勿重复点击！"
